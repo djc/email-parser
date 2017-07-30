@@ -1,3 +1,9 @@
+extern crate ordermap;
+
+use ordermap::OrderMap;
+
+use std::str;
+
 pub struct Message<'a> {
     bytes: &'a [u8],
 }
@@ -12,13 +18,13 @@ impl<'a> Message<'a> {
 }
 
 pub struct Headers<'a> {
-    slices: Vec<&'a [u8]>,
+    map: OrderMap<String, Vec<&'a [u8]>>,
 }
 
 impl<'a> Headers<'a> {
     fn new<'b>(bytes: &'b [u8]) -> Headers<'b> {
-        let mut slices = vec![];
-        let (mut start, mut nl, mut end) = (0, true, 0);
+        let mut map = OrderMap::new();
+        let (mut nl, mut end, mut key_start, mut key_end, mut val_start) = (true, 0, 0, 0, 0);
         for (i, b) in bytes.iter().enumerate() {
             if *b == b'\n' {
                 nl = true;
@@ -30,20 +36,27 @@ impl<'a> Headers<'a> {
             } else if nl {
                 if end == 1 && *b == b'\r' {
                     end = 2;
-                }
-                if !is_ws(*b) {
-                    if start < i {
-                        slices.push(&bytes[start..i]);
+                } else if !is_ws(*b) {
+                    if key_start < i {
+                        let key = str::from_utf8(&bytes[key_start..key_end]).unwrap();
+                        let values = map.entry(key.to_lowercase()).or_insert(vec![]);
+                        values.push(&bytes[val_start..i - 2]);
                     }
-                    start = i;
+                    key_start = i;
+                    key_end = 0;
                 }
                 nl = false;
+            } else if key_end == 0 && *b == b':' {
+                key_end = i;
+                val_start = i + 1;
+            } else if i == val_start && is_ws(*b) {
+                val_start = i + 1;
             }
         }
-        Headers { slices: slices }
+        Headers { map: map }
     }
-    pub fn iter(&self) -> std::slice::Iter<&[u8]> {
-        self.slices.iter()
+    pub fn iter(&self) -> ordermap::Iter<String, Vec<&[u8]>> {
+        self.map.iter()
     }
 }
 
