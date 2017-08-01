@@ -59,6 +59,9 @@ impl<'a> Headers<'a> {
         }
         Headers { map: map }
     }
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
     pub fn iter(&self) -> ordermap::Iter<String, Vec<&[u8]>> {
         self.map.iter()
     }
