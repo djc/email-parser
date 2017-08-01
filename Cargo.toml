@@ -5,3 +5,5 @@ authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 
 [dependencies]
 ordermap = "0.2"
+base64 = "0.6"
+encoding_rs = "0.6"

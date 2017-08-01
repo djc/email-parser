@@ -2,7 +2,10 @@ extern crate ordermap;
 
 use ordermap::OrderMap;
 
+use std::borrow::Cow;
 use std::str;
+
+mod decoder;
 
 pub struct Message<'a> {
     bytes: &'a [u8],
@@ -64,6 +67,13 @@ impl<'a> Headers<'a> {
     }
     pub fn iter(&self) -> ordermap::Iter<String, Vec<&[u8]>> {
         self.map.iter()
+    }
+    pub fn get_headers(&self, key: &str) -> Vec<Cow<str>> {
+        let values = match self.map.get(&key.to_lowercase()) {
+            None => { return Vec::new(); },
+            Some(vals) => vals,
+        };
+        values.iter().map(|s| decoder::decode(&s)).collect()
     }
 }
 
