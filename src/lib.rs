@@ -101,6 +101,12 @@ mod tests {
         assert_eq!(h.map.get("x"), Some(&vec![b"foo".as_ref()]));
         assert_eq!(h.map.get("y"), Some(&vec![b"bar".as_ref()]));
     }
+
+    #[test]
+    fn folding() {
+        let h = Headers::new(b"X: foo\r\n \tbar\r\n\r\n");
+        assert_eq!(h.map.get("x"), Some(&vec![b"foo\r\n \tbar".as_ref()]));
+    }
 }
 
 fn is_ws(b: u8) -> bool {
