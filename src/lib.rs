@@ -71,7 +71,7 @@ impl<'a> Headers<'a> {
     pub fn iter(&self) -> ordermap::Iter<String, Vec<&[u8]>> {
         self.map.iter()
     }
-    pub fn get_headers(&self, key: &str) -> Vec<Cow<str>> {
+    pub fn get(&self, key: &str) -> Vec<Cow<str>> {
         let values = match self.map.get(&key.to_lowercase()) {
             None => { return Vec::new(); },
             Some(vals) => vals,
