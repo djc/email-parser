@@ -24,48 +24,44 @@ pub struct Headers<'a> {
     map: OrderMap<String, Vec<&'a [u8]>>,
 }
 
+#[derive(Debug)]
+enum HeaderState<'a> {
+    Key(usize),
+    Colon(&'a str),
+    Value(&'a str, usize),
+    Ending(&'a str, usize),
+    Lf(&'a str, usize),
+}
+
 impl<'a> Headers<'a> {
     fn new<'b>(bytes: &'b [u8]) -> Headers<'b> {
         let mut map = OrderMap::new();
-        let (mut nl, mut end, mut key_start, mut key_end, mut val_start) = (true, 0, 0, 0, 0);
+        use HeaderState::*;
+        let mut state = Key(0);
         for (i, b) in bytes.iter().enumerate() {
-            if *b == b'\n' {
-                nl = true;
-                if end == 0 {
-                    end = 1;
-                } else if end == 2 {
-                    if key_end > 0 {
-                        let key = str::from_utf8(&bytes[key_start..key_end]).unwrap();
-                        let values = map.entry(key.to_lowercase()).or_insert(vec![]);
-                        values.push(&bytes[val_start..i - 3]);
-                    } else {
-                        panic!("found header without discernible key");
-                    }
+            state = match (state, *b) {
+                (Key(start), b':') => Colon(str::from_utf8(&bytes[start..i]).unwrap()),
+                (prev @ Key(_), _) => prev,
+                (prev @ Colon(_), b' ') |
+                (prev @ Colon(_), b'\t') => prev,
+                (Colon(key), _) => Value(key, i),
+                (Value(key, start), b'\n') => Lf(key, start),
+                (prev @ Value(_, _), _) => prev,
+                (Lf(key, start), b'\r') => Ending(key, start),
+                (Lf(key, start), b' ') |
+                (Lf(key, start), b'\t') => Value(key, start),
+                (Lf(key, start), _) => {
+                    let values = map.entry(key.to_lowercase()).or_insert(vec![]);
+                    values.push(&bytes[start..i - 2]);
+                    Key(i)
+                },
+                (Ending(key, start), b'\n') => {
+                    let values = map.entry(key.to_lowercase()).or_insert(vec![]);
+                    values.push(&bytes[start..i - 3]);
                     break;
-                }
-            } else if nl {
-                if end == 1 && *b == b'\r' {
-                    end = 2;
-                } else if !is_ws(*b) {
-                    if key_start < i {
-                        if key_end > 0 {
-                            let key = str::from_utf8(&bytes[key_start..key_end]).unwrap();
-                            let values = map.entry(key.to_lowercase()).or_insert(vec![]);
-                            values.push(&bytes[val_start..i - 2]);
-                        } else {
-                            panic!("found header without discernible key");
-                        }
-                    }
-                    key_start = i;
-                    key_end = 0;
-                }
-                nl = false;
-            } else if key_end == 0 && *b == b':' {
-                key_end = i;
-                val_start = i + 1;
-            } else if i == val_start && is_ws(*b) {
-                val_start = i + 1;
-            }
+                },
+                prev @ _ => panic!("invalid state transition {:?}", prev),
+            };
         }
         Headers { map: map }
     }
@@ -108,46 +104,3 @@ mod tests {
         assert_eq!(h.map.get("x"), Some(&vec![b"foo\r\n \tbar".as_ref()]));
     }
 }
-
-fn is_ws(b: u8) -> bool {
-    unsafe { ASCII.get_unchecked(b as usize) & SPACE != 0 }
-}
-
-static ASCII: [u8; 256] = [
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, SPACE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	SPACE, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT,
-	PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, PRINT, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-	NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE,
-];
-
-const NONE: u8 = 0b00;
-const PRINT: u8 = 0b01;
-const SPACE: u8 = 0b10;
