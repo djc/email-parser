@@ -84,6 +84,25 @@ impl<'a> Headers<'a> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::Headers;
+
+    #[test]
+    fn simple() {
+        let h = Headers::new(b"X: foo\r\nY: bar\r\n\r\nbody");
+        assert_eq!(h.map.get("x"), Some(&vec![b"foo".as_ref()]));
+        assert_eq!(h.map.get("y"), Some(&vec![b"bar".as_ref()]));
+    }
+
+    #[test]
+    fn no_body() {
+        let h = Headers::new(b"X: foo\r\nY: bar\r\n\r\n");
+        assert_eq!(h.map.get("x"), Some(&vec![b"foo".as_ref()]));
+        assert_eq!(h.map.get("y"), Some(&vec![b"bar".as_ref()]));
+    }
+}
+
 fn is_ws(b: u8) -> bool {
     unsafe { ASCII.get_unchecked(b as usize) & SPACE != 0 }
 }
