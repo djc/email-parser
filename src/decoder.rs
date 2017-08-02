@@ -59,8 +59,14 @@ pub fn decode(bytes: &[u8]) -> Cow<str> {
             (Lf, b'\t') |
             (Wsf, b' ') |
             (Wsf, b'\t') => Wsf,
-            (Wsf, b'=') => MaybeDecode(i),
-            (Wsf, _) => Septet(i),
+            (Wsf, b'=') => {
+                new.push(b' ');
+                MaybeDecode(i)
+            }
+            (Wsf, _) => {
+                new.push(b' ');
+                Septet(i)
+            },
             (prev @ Septet(_), _) => prev,
             // RFC 2047: trigger decoding
             (StartDecode, _) => Charset(i),
@@ -157,7 +163,7 @@ mod tests {
 
     #[test]
     fn folding() {
-        expect_variant!(b"ab\r\n    c", Owned, "abc");
+        expect_variant!(b"ab\r\n    c", Owned, "ab c");
     }
 
     #[test]
@@ -172,6 +178,6 @@ mod tests {
     fn rfc2047_b64() {
         expect_variant!(b"=?UTF-8?B?ScOxdMOrcm7DonRpw7Ruw6BsaXrDpnRpw7hu?=", Owned,
                         "Iñtërnâtiônàlizætiøn");
-        expect_variant!(b"=?utf-8?B?SW50ZXJu?=\r\n =?utf-8?Q?foo?=", Owned, "Internfoo");
+        expect_variant!(b"=?utf-8?B?SW50ZXJu?=\r\n =?utf-8?Q?foo?=", Owned, "Intern foo");
     }
 }
