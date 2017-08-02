@@ -34,6 +34,13 @@ impl<'a> Headers<'a> {
                 if end == 0 {
                     end = 1;
                 } else if end == 2 {
+                    if key_end > 0 {
+                        let key = str::from_utf8(&bytes[key_start..key_end]).unwrap();
+                        let values = map.entry(key.to_lowercase()).or_insert(vec![]);
+                        values.push(&bytes[val_start..i - 3]);
+                    } else {
+                        panic!("found header without discernible key");
+                    }
                     break;
                 }
             } else if nl {
