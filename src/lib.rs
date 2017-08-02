@@ -78,6 +78,14 @@ impl<'a> Headers<'a> {
         };
         values.iter().map(|s| decoder::decode(&s)).collect()
     }
+    pub fn get_first(&self, key: &str) -> Option<Cow<str>> {
+        let mut res = None;
+        let mut vec = self.get(key);
+        for val in vec.drain(..) {
+            res = Some(val);
+        }
+        res
+    }
 }
 
 #[cfg(test)]
