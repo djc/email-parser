@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 
 [dependencies]
-ordermap = "0.2"
+ordermap = "0.4"
 base64 = "0.6"
 encoding_rs = "0.6"
