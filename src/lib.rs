@@ -1,6 +1,6 @@
-extern crate ordermap;
+extern crate indexmap;
 
-use ordermap::OrderMap;
+use indexmap::IndexMap;
 
 use std::borrow::Cow;
 use std::str;
@@ -21,7 +21,7 @@ impl<'a> Message<'a> {
 }
 
 pub struct Headers<'a> {
-    map: OrderMap<String, Vec<&'a [u8]>>,
+    map: IndexMap<String, Vec<&'a [u8]>>,
 }
 
 #[derive(Debug)]
@@ -35,7 +35,7 @@ enum HeaderState<'a> {
 
 impl<'a> Headers<'a> {
     fn new<'b>(bytes: &'b [u8]) -> Headers<'b> {
-        let mut map = OrderMap::new();
+        let mut map = IndexMap::new();
         use HeaderState::*;
         let mut state = Key(0);
         for (i, b) in bytes.iter().enumerate() {
@@ -68,7 +68,7 @@ impl<'a> Headers<'a> {
     pub fn len(&self) -> usize {
         self.map.len()
     }
-    pub fn iter(&self) -> ordermap::Iter<String, Vec<&[u8]>> {
+    pub fn iter(&self) -> indexmap::map::Iter<String, Vec<&[u8]>> {
         self.map.iter()
     }
     pub fn get(&self, key: &str) -> Vec<Cow<str>> {

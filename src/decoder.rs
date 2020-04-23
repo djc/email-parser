@@ -111,7 +111,7 @@ pub fn decode(bytes: &[u8]) -> Cow<str> {
             (BEncoding(cset), b'?') => BText(cset, i + 1),
             (BText(cset, start), b'?') => {
                 let buf = &bytes[start..i];
-                let binary = base64::decode_config(buf, base64::MIME).unwrap();
+                let binary = base64::decode_config(buf, base64::IMAP_MUTF7).unwrap();
                 match Encoding::for_label(cset) {
                     Some(enc) => {
                         new.extend(enc.decode(&binary).0.as_ref().bytes());
