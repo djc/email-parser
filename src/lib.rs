@@ -42,24 +42,22 @@ impl<'a> Headers<'a> {
             state = match (state, *b) {
                 (Key(start), b':') => Colon(str::from_utf8(&bytes[start..i]).unwrap()),
                 (prev @ Key(_), _) => prev,
-                (prev @ Colon(_), b' ') |
-                (prev @ Colon(_), b'\t') => prev,
+                (prev @ Colon(_), b' ') | (prev @ Colon(_), b'\t') => prev,
                 (Colon(key), _) => Value(key, i),
                 (Value(key, start), b'\n') => Lf(key, start),
                 (prev @ Value(_, _), _) => prev,
                 (Lf(key, start), b'\r') => Ending(key, start),
-                (Lf(key, start), b' ') |
-                (Lf(key, start), b'\t') => Value(key, start),
+                (Lf(key, start), b' ') | (Lf(key, start), b'\t') => Value(key, start),
                 (Lf(key, start), _) => {
                     let values = map.entry(key.to_lowercase()).or_insert(vec![]);
                     values.push(&bytes[start..i - 2]);
                     Key(i)
-                },
+                }
                 (Ending(key, start), b'\n') => {
                     let values = map.entry(key.to_lowercase()).or_insert(vec![]);
                     values.push(&bytes[start..i - 3]);
                     break;
-                },
+                }
                 prev @ _ => panic!("invalid state transition {:?}", prev),
             };
         }
@@ -73,7 +71,9 @@ impl<'a> Headers<'a> {
     }
     pub fn get(&self, key: &str) -> Vec<Cow<'_, str>> {
         let values = match self.map.get(&key.to_lowercase()) {
-            None => { return Vec::new(); },
+            None => {
+                return Vec::new();
+            }
             Some(vals) => vals,
         };
         values.iter().map(|s| decoder::decode(&s)).collect()

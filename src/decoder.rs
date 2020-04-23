@@ -46,7 +46,7 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
             (Septet(start), b'\r') => {
                 new.extend(&bytes[start..i]);
                 Cr
-            },
+            }
             (Septet(start), b'=') => MaybeDecode(start),
             (MaybeDecode(start), b'?') => {
                 new.extend(&bytes[start..i - 1]);
@@ -55,10 +55,7 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
             (MaybeDecode(start), _) => Septet(start),
             // Handle whitespace folding
             (Cr, b'\n') => Lf,
-            (Lf, b' ') |
-            (Lf, b'\t') |
-            (Wsf, b' ') |
-            (Wsf, b'\t') => Wsf,
+            (Lf, b' ') | (Lf, b'\t') | (Wsf, b' ') | (Wsf, b'\t') => Wsf,
             (Wsf, b'=') => {
                 new.push(b' ');
                 MaybeDecode(i)
@@ -66,23 +63,21 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
             (Wsf, _) => {
                 new.push(b' ');
                 Septet(i)
-            },
+            }
             (prev @ Septet(_), _) => prev,
             // RFC 2047: trigger decoding
             (StartDecode, _) => Charset(i),
             (Charset(start), b'?') => ToEncoding(&bytes[start..i]),
             (prev @ Charset(_), _) => prev,
-            (ToEncoding(cset), b'Q') |
-            (ToEncoding(cset), b'q') => QEncoding(cset),
-            (ToEncoding(cset), b'B') |
-            (ToEncoding(cset), b'b') => BEncoding(cset),
+            (ToEncoding(cset), b'Q') | (ToEncoding(cset), b'q') => QEncoding(cset),
+            (ToEncoding(cset), b'B') | (ToEncoding(cset), b'b') => BEncoding(cset),
             // RFC 2047: Q encoding
             (QEncoding(cset), b'?') => QText(cset, Vec::new(), i + 1),
             (QText(cset, mut buf, start), b'_') => {
                 buf.extend(&bytes[start..i]);
                 buf.push(b' ');
                 QText(cset, buf, i + 1)
-            },
+            }
             (QText(cset, buf, start), b'?') => QEnding(cset, buf, start),
             (QEnding(cset, mut buf, start), b'=') => {
                 buf.extend(&bytes[start..i - 1]);
@@ -90,22 +85,25 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
                     Some(enc) => {
                         new.extend(enc.decode(&buf).0.as_ref().bytes());
                         Septet(i + 1)
-                    },
-                    None => panic!("unknown encoding {:?} from {:?}",
-                                   str::from_utf8(cset).unwrap(), orig_str),
+                    }
+                    None => panic!(
+                        "unknown encoding {:?} from {:?}",
+                        str::from_utf8(cset).unwrap(),
+                        orig_str
+                    ),
                 }
-            },
+            }
             (QEnding(cset, buf, start), b'?') => QEnding(cset, buf, start),
             (QEnding(cset, buf, start), _) => QText(cset, buf, start),
             (QText(cset, mut buf, start), b'=') => {
                 buf.extend(&bytes[start..i]);
                 QStart(cset, buf)
-            },
+            }
             (QStart(cset, buf), b) => QMid(cset, buf, b),
             (QMid(cset, mut buf, x), y) => {
                 buf.push((hex_to_val(x) << 4) + hex_to_val(y));
                 QText(cset, buf, i + 1)
-            },
+            }
             (prev @ QText(_, _, _), _) => prev,
             // RFC 2047: B encoding
             (BEncoding(cset), b'?') => BText(cset, i + 1),
@@ -116,34 +114,33 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
                     Some(enc) => {
                         new.extend(enc.decode(&binary).0.as_ref().bytes());
                         EndDecode
-                    },
-                    None => panic!("unknown encoding {}",
-                                   str::from_utf8(cset).unwrap()),
+                    }
+                    None => panic!("unknown encoding {}", str::from_utf8(cset).unwrap()),
                 }
-            },
+            }
             (prev @ BText(_, _), _) => prev,
             (EndDecode, b'=') => Septet(i + 1),
             // Panic for all transitions not described yet
-            prev @ _ => panic!("incorrect state transition (transforming): {:?} {:?}",
-                               prev, orig_str),
+            prev @ _ => panic!(
+                "incorrect state transition (transforming): {:?} {:?}",
+                prev, orig_str
+            ),
         };
     }
     match state {
-        Septet(0) |
-        MaybeDecode(0) => Cow::Borrowed(orig_str),
-        Septet(start) |
-        MaybeDecode(start) => {
+        Septet(0) | MaybeDecode(0) => Cow::Borrowed(orig_str),
+        Septet(start) | MaybeDecode(start) => {
             new.extend(&bytes[start..]);
             Cow::Owned(String::from_utf8(new).unwrap())
-        },
+        }
         prev => panic!("unexpected end state {:?} {:?}", prev, orig_str),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Cow;
     use super::decode;
+    use super::Cow;
 
     macro_rules! expect_variant {
         ( $input:expr, $variant:ident, $expect:expr ) => {
@@ -151,7 +148,7 @@ mod tests {
                 Cow::$variant(bytes) => assert_eq!(bytes, $expect),
                 d => panic!("incorrect variant {:?}", d),
             }
-        }
+        };
     }
 
     #[test]
@@ -168,16 +165,30 @@ mod tests {
 
     #[test]
     fn rfc2047_quoted() {
-        expect_variant!(b"=?UTF-8?Q?Foo_=C3=87ar?= <baz@example.org>", Owned,
-                        "Foo Çar <baz@example.org>");
-        expect_variant!(b"=?UTF-8?Q?Paper_R=c3=bcck?= crud", Owned, "Paper Rück crud");
+        expect_variant!(
+            b"=?UTF-8?Q?Foo_=C3=87ar?= <baz@example.org>",
+            Owned,
+            "Foo Çar <baz@example.org>"
+        );
+        expect_variant!(
+            b"=?UTF-8?Q?Paper_R=c3=bcck?= crud",
+            Owned,
+            "Paper Rück crud"
+        );
         expect_variant!(b"=?ISO-8859-1?Q?Question??=", Owned, "Question?");
     }
 
     #[test]
     fn rfc2047_b64() {
-        expect_variant!(b"=?UTF-8?B?ScOxdMOrcm7DonRpw7Ruw6BsaXrDpnRpw7hu?=", Owned,
-                        "Iñtërnâtiônàlizætiøn");
-        expect_variant!(b"=?utf-8?B?SW50ZXJu?=\r\n =?utf-8?Q?foo?=", Owned, "Intern foo");
+        expect_variant!(
+            b"=?UTF-8?B?ScOxdMOrcm7DonRpw7Ruw6BsaXrDpnRpw7hu?=",
+            Owned,
+            "Iñtërnâtiônàlizætiøn"
+        );
+        expect_variant!(
+            b"=?utf-8?B?SW50ZXJu?=\r\n =?utf-8?Q?foo?=",
+            Owned,
+            "Intern foo"
+        );
     }
 }
