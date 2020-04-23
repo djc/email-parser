@@ -1,4 +1,4 @@
-extern crate indexmap;
+use indexmap;
 
 use indexmap::IndexMap;
 
@@ -68,17 +68,17 @@ impl<'a> Headers<'a> {
     pub fn len(&self) -> usize {
         self.map.len()
     }
-    pub fn iter(&self) -> indexmap::map::Iter<String, Vec<&[u8]>> {
+    pub fn iter(&self) -> indexmap::map::Iter<'_, String, Vec<&[u8]>> {
         self.map.iter()
     }
-    pub fn get(&self, key: &str) -> Vec<Cow<str>> {
+    pub fn get(&self, key: &str) -> Vec<Cow<'_, str>> {
         let values = match self.map.get(&key.to_lowercase()) {
             None => { return Vec::new(); },
             Some(vals) => vals,
         };
         values.iter().map(|s| decoder::decode(&s)).collect()
     }
-    pub fn get_first(&self, key: &str) -> Option<Cow<str>> {
+    pub fn get_first(&self, key: &str) -> Option<Cow<'_, str>> {
         let mut res = None;
         let mut vec = self.get(key);
         for val in vec.drain(..) {

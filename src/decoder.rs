@@ -1,5 +1,5 @@
-extern crate base64;
-extern crate encoding_rs;
+use base64;
+use encoding_rs;
 
 use self::encoding_rs::Encoding;
 
@@ -36,7 +36,7 @@ fn hex_to_val(b: u8) -> u8 {
     }
 }
 
-pub fn decode(bytes: &[u8]) -> Cow<str> {
+pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
     use self::DecoderState::*;
     let orig_str = str::from_utf8(bytes).unwrap();
     let (mut new, mut state) = (Vec::new(), Septet(0));

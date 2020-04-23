@@ -2,6 +2,7 @@
 name = "email-parser"
 version = "0.1.0"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
+edition = "2018"
 
 [dependencies]
 indexmap = "1.3"
