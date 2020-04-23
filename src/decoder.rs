@@ -121,7 +121,7 @@ pub fn decode(bytes: &[u8]) -> Cow<'_, str> {
             (prev @ BText(_, _), _) => prev,
             (EndDecode, b'=') => Septet(i + 1),
             // Panic for all transitions not described yet
-            prev @ _ => panic!(
+            prev => panic!(
                 "incorrect state transition (transforming): {:?} {:?}",
                 prev, orig_str
             ),

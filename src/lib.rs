@@ -12,7 +12,7 @@ pub struct Message<'a> {
 }
 
 impl<'a> Message<'a> {
-    pub fn from_slice<'b>(bytes: &'b [u8]) -> Message<'b> {
+    pub fn from_slice(bytes: &[u8]) -> Message<'_> {
         Message { bytes }
     }
     pub fn headers<'s>(&'s self) -> Headers<'s> {
@@ -34,7 +34,7 @@ enum HeaderState<'a> {
 }
 
 impl<'a> Headers<'a> {
-    fn new<'b>(bytes: &'b [u8]) -> Headers<'b> {
+    fn new(bytes: &[u8]) -> Headers<'_> {
         let mut map = IndexMap::new();
         use HeaderState::*;
         let mut state = Key(0);
@@ -58,14 +58,18 @@ impl<'a> Headers<'a> {
                     values.push(&bytes[start..i - 3]);
                     break;
                 }
-                prev @ _ => panic!("invalid state transition {:?}", prev),
+                prev => panic!("invalid state transition {:?}", prev),
             };
         }
-        Headers { map: map }
+        Headers { map }
     }
     pub fn len(&self) -> usize {
         self.map.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+
     pub fn iter(&self) -> indexmap::map::Iter<'_, String, Vec<&[u8]>> {
         self.map.iter()
     }
